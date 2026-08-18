@@ -39,7 +39,7 @@ MLF_REGISTRY_NAMESPACE_REF = Ref(1, 3)
 MLF_REGISTRY_ENTRY_KIND_REF = Ref(1, 200)
 MLF_REGISTRY_UTF8_PAYLOAD_KIND_REF = Ref(1, 201)
 P1_SECTION_SET = (1, 8, 9, 10)
-_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+_SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,7 +123,7 @@ def inspect_mlf_native(data: bytes | bytearray | memoryview) -> MLFInspection:
                 "semantic": fp.get("semantic_hash"),
                 "presentation": fp.get("presentation_hash"),
             }
-            if not isinstance(fp.get("algorithm"), str) or any(not isinstance(v, str) or not _HEX64.fullmatch(v) for v in mapping.values()):
+            if not isinstance(fp.get("algorithm"), str) or any(not isinstance(v, str) or not _SHA256.fullmatch(v) for v in mapping.values()):
                 raise OriginDecodeError("P5_MLF_FINGERPRINT_INVALID")
             if "checksums.json" not in names:
                 raise OriginDecodeError("P5_MLF_CHECKSUM_FILE_MISSING")
@@ -139,7 +139,8 @@ def inspect_mlf_native(data: bytes | bytearray | memoryview) -> MLFInspection:
                     raise OriginDecodeError("P5_MLF_CHECKSUM_INVALID", path)
                 seen.add(path)
                 payload = zf.read(path)
-                if hashlib.sha256(payload).hexdigest() != row.get("sha256") or ("bytes" in row and row.get("bytes") != len(payload)):
+                expected = "sha256:" + hashlib.sha256(payload).hexdigest()
+                if expected != row.get("sha256") or ("bytes" in row and row.get("bytes") != len(payload)):
                     raise OriginDecodeError("P5_MLF_CHECKSUM_MISMATCH", path)
     except OriginDecodeError:
         raise
@@ -161,6 +162,10 @@ def inspect_mlf_native(data: bytes | bytearray | memoryview) -> MLFInspection:
     )
 
 
+def _fp_bytes(value: str) -> bytes:
+    return bytes.fromhex(value.split(":", 1)[1])
+
+
 def mlf_registry() -> RegistryBundle:
     rows = (
         (2, "mlf-profile-registry"), (3, "isql-origin-p5-mlf"), (10, "profile:mlf-1.0"),
@@ -174,15 +179,13 @@ def mlf_registry() -> RegistryBundle:
 
 
 def wrap_mlf_native(data: bytes | bytearray | memoryview) -> OMIRObject:
-    raw = bytes(data)
-    info = inspect_mlf_native(raw)
-    digest = hashlib.sha256(raw).digest()
+    raw = bytes(data); info = inspect_mlf_native(raw); digest = hashlib.sha256(raw).digest()
     identities = (
         IdentityEntry(NATIVE_BYTES_IDENTITY_REF, SHA256_REF, digest, 0),
-        IdentityEntry(MLF_STRUCTURAL_IDENTITY_REF, SHA256_REF, bytes.fromhex(info.fingerprints["structural"]), 0),
-        IdentityEntry(MLF_CONTENT_IDENTITY_REF, SHA256_REF, bytes.fromhex(info.fingerprints["content"]), 0),
-        IdentityEntry(MLF_SEMANTIC_IDENTITY_REF, SHA256_REF, bytes.fromhex(info.fingerprints["semantic"]), 0),
-        IdentityEntry(MLF_PRESENTATION_IDENTITY_REF, SHA256_REF, bytes.fromhex(info.fingerprints["presentation"]), 0),
+        IdentityEntry(MLF_STRUCTURAL_IDENTITY_REF, SHA256_REF, _fp_bytes(info.fingerprints["structural"]), 0),
+        IdentityEntry(MLF_CONTENT_IDENTITY_REF, SHA256_REF, _fp_bytes(info.fingerprints["content"]), 0),
+        IdentityEntry(MLF_SEMANTIC_IDENTITY_REF, SHA256_REF, _fp_bytes(info.fingerprints["semantic"]), 0),
+        IdentityEntry(MLF_PRESENTATION_IDENTITY_REF, SHA256_REF, _fp_bytes(info.fingerprints["presentation"]), 0),
     )
     invariant = InvariantContract(BYTE_EXACT_INVARIANT_REF, (NATIVE_BYTES_OBSERVABLE_REF,), BYTES_EQUAL_COMPARATOR_REF, None, ARTIFACT_SCOPE_REF, SHA256_VALIDATOR_REF, 1)
     payload = PayloadEntry(NATIVE_PAYLOAD_REF, 0, OCTET_STREAM_REF, MLF_PACKAGE_CODEC_REF, len(raw), Digest(SHA256_REF, digest), raw)
@@ -193,10 +196,8 @@ def wrap_mlf_native(data: bytes | bytearray | memoryview) -> OMIRObject:
         RegistryPin(1, MLF_REGISTRY_BUNDLE_KIND_REF, ext.revision, Digest(SHA256_REF, orb_digest(ext)), 0),
     )
     return OMIRObject(OMIR_FORMAT_VERSION, 0, MLF_PACKAGE_KIND_REF, MLF_PROFILE_REF, SHA256_REF, pins, (
-        Section(1, 0, encode_identity_family(identities)),
-        Section(8, 0, encode_invariants((invariant,))),
-        Section(9, 0, encode_payload_table((payload,))),
-        Section(10, 0, encode_profile_binding(profile)),
+        Section(1, 0, encode_identity_family(identities)), Section(8, 0, encode_invariants((invariant,))),
+        Section(9, 0, encode_payload_table((payload,))), Section(10, 0, encode_profile_binding(profile)),
     ))
 
 
@@ -206,10 +207,8 @@ def validate_mlf_wrapper(obj: OMIRObject) -> list[str]:
         return errors + ["P1_SECTION_SET_INVALID"]
     try:
         by = {section.tag: section for section in obj.sections}
-        identities = decode_identity_family(by[1].payload)
-        invariants = decode_invariants(by[8].payload)
-        payloads = decode_payload_table(by[9].payload)
-        profile = decode_profile_binding(by[10].payload)
+        identities = decode_identity_family(by[1].payload); invariants = decode_invariants(by[8].payload)
+        payloads = decode_payload_table(by[9].payload); profile = decode_profile_binding(by[10].payload)
     except Exception as exc:
         return errors + [f"P5_MLF_SECTION_DECODE_FAILED:{exc}"]
     if len(payloads) != 1:
@@ -222,28 +221,22 @@ def validate_mlf_wrapper(obj: OMIRObject) -> list[str]:
     digest = hashlib.sha256(native).digest()
     expected = (
         IdentityEntry(NATIVE_BYTES_IDENTITY_REF, SHA256_REF, digest, 0),
-        IdentityEntry(MLF_STRUCTURAL_IDENTITY_REF, SHA256_REF, bytes.fromhex(info.fingerprints["structural"]), 0),
-        IdentityEntry(MLF_CONTENT_IDENTITY_REF, SHA256_REF, bytes.fromhex(info.fingerprints["content"]), 0),
-        IdentityEntry(MLF_SEMANTIC_IDENTITY_REF, SHA256_REF, bytes.fromhex(info.fingerprints["semantic"]), 0),
-        IdentityEntry(MLF_PRESENTATION_IDENTITY_REF, SHA256_REF, bytes.fromhex(info.fingerprints["presentation"]), 0),
+        IdentityEntry(MLF_STRUCTURAL_IDENTITY_REF, SHA256_REF, _fp_bytes(info.fingerprints["structural"]), 0),
+        IdentityEntry(MLF_CONTENT_IDENTITY_REF, SHA256_REF, _fp_bytes(info.fingerprints["content"]), 0),
+        IdentityEntry(MLF_SEMANTIC_IDENTITY_REF, SHA256_REF, _fp_bytes(info.fingerprints["semantic"]), 0),
+        IdentityEntry(MLF_PRESENTATION_IDENTITY_REF, SHA256_REF, _fp_bytes(info.fingerprints["presentation"]), 0),
     )
-    if identities != expected:
-        errors.append("P5_MLF_IDENTITY_FAMILY_MISMATCH")
-    if payloads[0].digest.digest != digest or payloads[0].codec_ref != MLF_PACKAGE_CODEC_REF:
-        errors.append("P5_MLF_PAYLOAD_BINDING_MISMATCH")
+    if identities != expected: errors.append("P5_MLF_IDENTITY_FAMILY_MISMATCH")
+    if payloads[0].digest.digest != digest or payloads[0].codec_ref != MLF_PACKAGE_CODEC_REF: errors.append("P5_MLF_PAYLOAD_BINDING_MISMATCH")
     expected_inv = InvariantContract(BYTE_EXACT_INVARIANT_REF, (NATIVE_BYTES_OBSERVABLE_REF,), BYTES_EQUAL_COMPARATOR_REF, None, ARTIFACT_SCOPE_REF, SHA256_VALIDATOR_REF, 1)
-    if invariants != (expected_inv,):
-        errors.append("P1_BYTE_EXACT_INVARIANT_MISSING")
-    if obj.profile_ref != MLF_PROFILE_REF or obj.object_kind_ref != MLF_PACKAGE_KIND_REF:
-        errors.append("P5_MLF_HEADER_BINDING_MISMATCH")
-    if profile.profile_ref != MLF_PROFILE_REF or profile.object_kind_refs != (MLF_PACKAGE_KIND_REF,):
-        errors.append("P5_MLF_PROFILE_BINDING_MISMATCH")
+    if invariants != (expected_inv,): errors.append("P1_BYTE_EXACT_INVARIANT_MISSING")
+    if obj.profile_ref != MLF_PROFILE_REF or obj.object_kind_ref != MLF_PACKAGE_KIND_REF: errors.append("P5_MLF_HEADER_BINDING_MISMATCH")
+    if profile.profile_ref != MLF_PROFILE_REF or profile.object_kind_refs != (MLF_PACKAGE_KIND_REF,): errors.append("P5_MLF_PROFILE_BINDING_MISMATCH")
     return errors
 
 
 def unwrap_mlf_native(obj: OMIRObject) -> bytes:
     errors = validate_mlf_wrapper(obj)
-    if errors:
-        raise OriginDecodeError("P5_MLF_WRAPPER_INVALID", ";".join(errors))
+    if errors: raise OriginDecodeError("P5_MLF_WRAPPER_INVALID", ";".join(errors))
     by = {section.tag: section for section in obj.sections}
     return decode_payload_table(by[9].payload)[0].body_or_locator
