@@ -1,0 +1,15 @@
+{
+  "schema": "isql-origin-bridge-plan/v0.5",
+  "source_profile": "isql-mem",
+  "target_profile": "isql-dsr",
+  "source_artifact_kind": "mem.isn7",
+  "target_artifact_kind": "dsr.state",
+  "transition_ref": "0:1001",
+  "fidelity_class": 2,
+  "preserved_invariants": ["0:601"],
+  "lost_invariants": ["0:602"],
+  "validator_ref": "0:1101",
+  "authority_ref": "0:1201",
+  "provenance_ref": "0:1301",
+  "temporal_ref": "0:1401"
+}
