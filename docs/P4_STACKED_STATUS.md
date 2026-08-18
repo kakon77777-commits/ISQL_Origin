@@ -1,0 +1,1 @@
+P4 stacked branch head source is based directly on OMIR P3 v0.4.0. The archival v0.5.0 release remains the full verification package; this branch is the source-focused mirror used for stacked review and CI.
