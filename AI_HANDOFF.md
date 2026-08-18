@@ -1,15 +1,14 @@
-# ISQL Origin OMIR P2 v0.3.0 — AI Handoff
+# ISQL Origin P3 v0.4.0 — AI Handoff
 
-- P0: deterministic OMIR-1 / ORB-1 substrate.
-- P1: byte-exact native MEM/DSR profile wrappers.
-- P2: local SemanticChart and Transition contracts plus the first bounded holonomy harness.
+P0 = deterministic OMIR/ORB substrate.
+P1 = byte-exact MEM/DSR native wrappers.
+P2 = local SemanticChart/Transition contracts + bounded holonomy.
+P3 = OperatorDescriptor/AuthorityRecord + deny-first ActionCertificate + non-executing DSR program handoff.
 
-Canonical P2 sections: `2 SemanticCharts`, `3 Transitions`.
+Authority records are declarations, not automatic trust. Only refs explicitly accepted by the non-canonical ActionContext participate. Matching denies override grants.
 
-A transition contains references and declarations, not executable code. The external reference harness is non-canonical and whitelist-only.
+`ready` means eligible under the supplied context; it never means executed.
 
-Holonomy statuses: `exact`, `within_tolerance`, `drift`. Drift is a measured result, not a decode error.
+DSR handoff accepts only native causal/VM `.isqlp`, binds Origin and DSR bytes with SHA-256, and always sets `execute=false`.
 
-Hard boundaries: no arbitrary execution from OMIR; no AI in canonical decode; no network resolution; no global ontology requirement; no MEM↔DSR semantic conversion; P1 wrapper contract still rejects extra sections.
-
-Next natural phase: P3 Operator descriptors + Authority records + ActionCertificate + DSR execution handoff. Origin itself must not become a VM.
+Next natural phase: P4 bridge receipts with explicit preserved/lost cross-profile invariants. Keep conversion separate from authority and execution.

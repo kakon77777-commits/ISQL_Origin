@@ -1,90 +1,58 @@
-# ISQL Origin — OMIR P2 v0.3.0
+# ISQL Origin — OMIR P3 v0.4.0
 
-Standalone reference runtime for the internal ISQL Origin architecture.
+P3 extends the P2 source branch with operator, authority, deterministic action-eligibility, and a non-executing DSR program handoff.
 
-## P0 — canonical machine substrate
-
-- shortest-form UVarInt/SVarInt, Ref, ByteString and Digest;
-- ORB-1 append-only local registries;
-- OMIR-1 deterministic envelope and RegistryPin;
-- IdentityFamily, InvariantContracts, PayloadTable and ProfileBinding;
-- fail-closed canonical decoding and Registry validation.
-
-## P1 — native MEM/DSR profile binding
-
-P1 carries existing MEM/DSR native bytes unchanged inside Origin wrappers and proves:
+## Canonical contracts
 
 ```text
-unwrap(wrap(native_bytes)) == native_bytes
+4 Operators
+5 Authority
 ```
 
-No MEM↔DSR format assimilation or native execution occurs.
+`OperatorDescriptor` declares type/signature/guard, capabilities, effects, authority requirements, invariant obligations, optional executor ref, resource bound, and provenance.
 
-## P2 — local semantic charts and transition contracts
+`AuthorityRecord` declares subject, issuer, grant/deny sets, scope, and optional validity/evidence/signature refs. Presence in OMIR is a declaration, not automatic trust.
 
-Reserved OMIR sections are now active:
+## ActionCertificate
+
+A non-canonical `ActionContext` explicitly selects subject/target/type, satisfied guards, direct capability grants/denials, and accepted authority records. Evaluation is deterministic and deny-first.
 
 ```text
-2  SemanticCharts
-3  Transitions
+ready != executed
 ```
 
-A chart records local semantic coordinate metadata. A transition records source/target chart refs, transformer ref, F0..F4 fidelity, deterministic/reversible flags, resource-bound ref, and explicit preserved/lost invariants.
+## DSR handoff boundary
 
-P2 validates transitions against object-local chart refs and section-8 invariant contracts.
+A ready certificate may be paired with native `dsr.causal-program` or `dsr.vm-program` bytes to create a handoff receipt. The receipt binds Origin and DSR bytes by SHA-256 and always reports `execute=false`.
 
-## Holonomy reference harness
+Origin does not import or invoke DSR.
 
-P2 can run a bounded closed-loop experiment:
+## Source-focused GitHub layout
 
-```text
-A -> B -> C -> A
-```
+The stacked P3 branch keeps P2 source intact and adds compatibility extension modules:
 
-and report:
+- `p3_sections.py` — section 4/5 wire codec;
+- `p3_validation.py` — P3 contract validation;
+- `action.py` — deny-first ActionCertificate;
+- `handoff.py` — non-executing DSR handoff;
+- `p3_cli.py` — P3 commands, delegating all older commands to the P2 CLI.
 
-```text
-exact
-within_tolerance
-drift
-```
+The downloadable archival release contains the fully integrated source tree, 85-test suite, wheel, MEM/DSR reference-decoder logs, and 180-file checksum manifest.
 
-The runtime does **not** execute code carried by OMIR. The reference harness is external non-canonical JSON and only supports a small whitelist of pure deterministic operations.
-
-## CLI
+## P3 commands
 
 ```bash
-isql-origin semantic-info examples/p2/valid-holonomy.omir
-
-isql-origin holonomy-check examples/p2/valid-holonomy.omir \
-  --harness examples/p2/harness-exact.json \
-  --payload-file examples/p2/source.txt \
-  --path 0:301,0:302,0:303 \
-  --invariant 0:601
+isql-origin operator-info examples/p3/valid-action.omir
+isql-origin action-certificate examples/p3/valid-action.omir --operator 0:701 --context examples/p3/context-valid.json
+isql-origin dsr-handoff examples/p3/valid-action.omir --operator 0:701 --context examples/p3/context-valid.json --executor-file fixtures/dsr/vm.isqlp
 ```
 
-Existing P0/P1 commands remain available:
+## Hard boundaries
 
-```bash
-isql-origin inspect examples/minimal.omir
-isql-origin validate examples/minimal.omir
-isql-origin profile-list
-isql-origin profile-detect fixtures/mem/base.isql7
-isql-origin wrap-native fixtures/mem/base.isql7 --out memory.omir
-isql-origin validate-wrapper memory.omir
-isql-origin unwrap-native memory.omir --out restored.isql7
-```
-
-## Verification
-
-The GitHub repository is source-focused. The full release ZIP contains the complete 57-test suite, wheel, native MEM/DSR reference-decoder validation logs, and 137-file checksum manifest.
-
-Core source smoke/conformance tests can be run with:
-
-```bash
-PYTHONPATH=src python -m unittest discover -s tests -v
-```
-
-## Canonical boundary
-
-Canonical authority remains binary OMIR/ORB bytes plus profile-native bytes. CLI JSON, harness JSON and holonomy reports are inspection/test artifacts, not canonical source of truth.
+- no arbitrary executor invocation from OMIR;
+- no DSR import or VM execution in Origin;
+- no AI authorization;
+- no network resolution;
+- no implicit signature/issuer trust;
+- no world mutation;
+- no MEM↔DSR semantic assimilation.

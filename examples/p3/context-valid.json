@@ -1,0 +1,9 @@
+{
+  "subject_ref": "0:501",
+  "target_ref": "0:511",
+  "target_type_ref": "0:101",
+  "satisfied_guard_refs": [],
+  "granted_capabilities": ["0:201"],
+  "denied_capabilities": [],
+  "accepted_authority_refs": ["0:411"]
+}
