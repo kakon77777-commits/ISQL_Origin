@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "isql-origin-runtime"
+version = "0.3.0"
+description = "ISQL Origin OMIR-1 / ORB-1 P2 local semantic charts, transitions, and bounded holonomy"
+requires-python = ">=3.12"
+license = {text = "Apache-2.0"}
+authors = [{name = "Neo.K / EveMissLab"}]
+dependencies = []
+
+[project.scripts]
+isql-origin = "isql_origin.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

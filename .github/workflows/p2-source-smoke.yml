@@ -1,0 +1,43 @@
+name: P2 Source Smoke
+
+on:
+  push:
+    branches:
+      - agent/omir-p2-v0.3.0
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run source smoke suite
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Semantic info
+        run: PYTHONPATH=src python -m isql_origin.cli semantic-info examples/p2/valid-holonomy.omir
+      - name: Holonomy exact
+        run: >-
+          PYTHONPATH=src python -m isql_origin.cli holonomy-check examples/p2/valid-holonomy.omir
+          --harness examples/p2/harness-exact.json
+          --payload-file examples/p2/source.txt
+          --path 0:301,0:302,0:303
+          --invariant 0:601
+      - name: Holonomy drift
+        run: >-
+          PYTHONPATH=src python -m isql_origin.cli holonomy-check examples/p2/valid-holonomy.omir
+          --harness examples/p2/harness-drift.json
+          --payload-file examples/p2/source.txt
+          --path 0:301,0:302,0:303
+          --invariant 0:601
+      - name: Holonomy tolerance
+        run: >-
+          PYTHONPATH=src python -m isql_origin.cli holonomy-check examples/p2/valid-holonomy.omir
+          --harness examples/p2/harness-drift.json
+          --payload-file examples/p2/source.txt
+          --path 0:301,0:302,0:303
+          --invariant 0:602
