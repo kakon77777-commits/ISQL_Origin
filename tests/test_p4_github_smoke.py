@@ -10,7 +10,7 @@ from isql_origin.p4_bridge import (
 
 ROOT=Path(__file__).resolve().parents[1]
 SRC=(ROOT/'fixtures/p4/mem-source.isql7').read_bytes()
-TGT=(ROOT/'fixtures/p3/dsr-state.isqln').read_bytes()
+TGT=(ROOT/'fixtures/p4/dsr-target.isqln').read_bytes()
 PLAN=parse_bridge_plan(json.loads((ROOT/'examples/p4/plan.json').read_text()))
 
 class P4GithubSmoke(unittest.TestCase):
