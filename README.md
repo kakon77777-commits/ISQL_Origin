@@ -1,58 +1,46 @@
-# ISQL Origin — OMIR P3 v0.4.0
+# ISQL Origin — OMIR P4 v0.5.0
 
-P3 extends the P2 source branch with operator, authority, deterministic action-eligibility, and a non-executing DSR program handoff.
+P4 adds **cross-profile BridgePlan / BridgeCandidate / BridgeReceipt contracts** on top of P3 without performing profile conversion inside Origin.
 
-## Canonical contracts
-
-```text
-4 Operators
-5 Authority
-```
-
-`OperatorDescriptor` declares type/signature/guard, capabilities, effects, authority requirements, invariant obligations, optional executor ref, resource bound, and provenance.
-
-`AuthorityRecord` declares subject, issuer, grant/deny sets, scope, and optional validity/evidence/signature refs. Presence in OMIR is a declaration, not automatic trust.
-
-## ActionCertificate
-
-A non-canonical `ActionContext` explicitly selects subject/target/type, satisfied guards, direct capability grants/denials, and accepted authority records. Evaluation is deterministic and deny-first.
+## P4 boundary
 
 ```text
-ready != executed
+external producer supplies source + target native bytes
+        ↓
+Origin detects exact profile/artifact/version + SHA-256
+        ↓
+BridgePlan declares transition, F0..F4, preserved/lost invariants
+        ↓
+SHA-bound ObservationBundle
+        ↓
+whitelisted comparator verification
+        ↓
+BridgeReceipt: VERIFIED or REJECTED
 ```
 
-## DSR handoff boundary
+Every P4 candidate/receipt is non-canonical sidecar metadata and fixes:
 
-A ready certificate may be paired with native `dsr.causal-program` or `dsr.vm-program` bytes to create a handoff receipt. The receipt binds Origin and DSR bytes by SHA-256 and always reports `execute=false`.
+```text
+execute = false
+conversion_performed = false
+```
 
-Origin does not import or invoke DSR.
+`VERIFIED` means only that the declared P4 observations satisfy the declared preserved-invariant contract. It does **not** claim global MEM↔DSR semantic equivalence.
 
-## Source-focused GitHub layout
+Built-in comparison is deliberately bounded to `bytes-eq` and `utf8-int-distance`; no arbitrary plugin, AI, network, subprocess, native runtime import or converter VM is introduced.
 
-The stacked P3 branch keeps P2 source intact and adds compatibility extension modules:
-
-- `p3_sections.py` — section 4/5 wire codec;
-- `p3_validation.py` — P3 contract validation;
-- `action.py` — deny-first ActionCertificate;
-- `handoff.py` — non-executing DSR handoff;
-- `p3_cli.py` — P3 commands, delegating all older commands to the P2 CLI.
-
-The downloadable archival release contains the fully integrated source tree, 85-test suite, wheel, MEM/DSR reference-decoder logs, and 180-file checksum manifest.
-
-## P3 commands
+## CLI
 
 ```bash
-isql-origin operator-info examples/p3/valid-action.omir
-isql-origin action-certificate examples/p3/valid-action.omir --operator 0:701 --context examples/p3/context-valid.json
-isql-origin dsr-handoff examples/p3/valid-action.omir --operator 0:701 --context examples/p3/context-valid.json --executor-file fixtures/dsr/vm.isqlp
+isql-origin bridge-candidate SOURCE TARGET --plan plan.json
+isql-origin bridge-verify SOURCE TARGET --plan plan.json --observations observations.json --out receipt.json
+isql-origin bridge-receipt-verify receipt.json --source SOURCE --target TARGET
 ```
 
-## Hard boundaries
+P0–P3 commands remain delegated to the previous compatibility CLI layers.
 
-- no arbitrary executor invocation from OMIR;
-- no DSR import or VM execution in Origin;
-- no AI authorization;
-- no network resolution;
-- no implicit signature/issuer trust;
-- no world mutation;
-- no MEM↔DSR semantic assimilation.
+## Verification
+
+The downloadable archival release carries the fully integrated runtime, wheel, complete **103-test** suite, MEM/DSR v1.0 reference-decoder logs and **231-file checksum manifest**.
+
+This GitHub stacked branch is intentionally source-focused and carries a P4 PR-triggered smoke workflow using the same schemas, identities and VERIFIED/REJECTED behavior.
