@@ -1,6 +1,6 @@
 """ISQL Origin OMIR/ORB reference runtime."""
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 from .binary import Digest, Ref
 from .omir import OMIRObject, RegistryPin, Section, decode_omir, encode_omir
@@ -12,7 +12,8 @@ from .action import ActionContext, ActionCertificate, build_action_certificate
 from .handoff import DSRHandoff, prepare_dsr_handoff
 from .sections import SemanticChart, TransitionContract
 from .p3_sections import OperatorDescriptor, AuthorityRecord
-from .p4_bridge import (
+from .p5_mlf import MLFInspection, inspect_mlf_native, wrap_mlf_native, validate_mlf_wrapper, unwrap_mlf_native
+from .p5_bridge import (
     BridgePlan, BridgeCandidate, BridgeObservation, BridgeObservationBundle,
     BridgeInvariantResult, BridgeReceipt, parse_bridge_plan, build_bridge_candidate,
     parse_observation_bundle, evaluate_bridge_observations, finalize_bridge_receipt,
@@ -26,7 +27,8 @@ __all__ = [
     "wrap_native_artifact", "unwrap_native_artifact", "validate_native_wrapper", "inspect_native_wrapper",
     "SemanticChart", "TransitionContract", "ReferenceHarness", "HolonomyReport", "run_holonomy",
     "prepare_dsr_handoff", "DSRHandoff", "build_action_certificate", "ActionCertificate", "ActionContext",
-    "AuthorityRecord", "OperatorDescriptor", "BridgePlan", "BridgeCandidate", "BridgeObservation",
+    "AuthorityRecord", "OperatorDescriptor", "MLFInspection", "inspect_mlf_native", "wrap_mlf_native",
+    "validate_mlf_wrapper", "unwrap_mlf_native", "BridgePlan", "BridgeCandidate", "BridgeObservation",
     "BridgeObservationBundle", "BridgeInvariantResult", "BridgeReceipt", "parse_bridge_plan",
     "build_bridge_candidate", "parse_observation_bundle", "evaluate_bridge_observations",
     "finalize_bridge_receipt", "parse_bridge_receipt", "verify_bridge_receipt_binding",
