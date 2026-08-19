@@ -1,6 +1,6 @@
 """ISQL Origin OMIR/ORB reference runtime."""
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 from .binary import Digest, Ref
 from .omir import OMIRObject, RegistryPin, Section, decode_omir, encode_omir

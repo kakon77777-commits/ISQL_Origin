@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "isql-origin-runtime"
-version = "0.6.0"
-description = "ISQL Origin OMIR P5 MLF third-profile stress test"
+version = "0.7.0"
+description = "ISQL Origin OMIR P6 independent Go implementation and conformance"
 requires-python = ">=3.12"
 license = {text = "Apache-2.0"}
 authors = [{name = "Neo.K / EveMissLab"}]
