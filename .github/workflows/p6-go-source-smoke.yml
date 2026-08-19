@@ -1,0 +1,33 @@
+name: P6 Independent Go Source Smoke
+
+on:
+  pull_request:
+    branches:
+      - agent/omir-p5-v0.6.0
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: Compile independent packages and run source smoke
+        working-directory: independent/go
+        run: |
+          go test ./githubsmoke -count=1
+          go test ./wire ./sections ./conformance ./sidecar -run '^$' -count=1
+      - name: Build independent CLI
+        working-directory: independent/go
+        run: go build -o /tmp/isql-origin-go ./cmd/isql-origin-go
+      - name: Independent MLF inspection
+        run: /tmp/isql-origin-go mlf-info fixtures/p5/sample.mlf
+      - name: Published conformance evidence has no failures
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('validation/p6/go-conformance.json'))
+          assert (p['total'],p['passed'],p['spec_gaps'],p['failures']) == (46,45,1,0), p
+          print('P6_CONFORMANCE_EVIDENCE=PASS_WITH_SPEC_GAPS')
+          PY
