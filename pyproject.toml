@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "isql-origin-runtime"
-version = "0.5.0"
-description = "ISQL Origin OMIR-1 / ORB-1 P4 cross-profile bridge receipts and preserved/lost invariant accounting"
+version = "0.6.0"
+description = "ISQL Origin OMIR P5 MLF third-profile stress test"
 requires-python = ">=3.12"
 license = {text = "Apache-2.0"}
 authors = [{name = "Neo.K / EveMissLab"}]
 dependencies = []
 
 [project.scripts]
-isql-origin = "isql_origin.p4_cli:main"
+isql-origin = "isql_origin.p5_cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

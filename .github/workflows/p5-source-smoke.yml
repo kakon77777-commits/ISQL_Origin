@@ -1,0 +1,78 @@
+name: P5 Source + MLF Reference Oracle
+
+on:
+  push:
+    branches:
+      - agent/omir-p5-v0.6.0
+  pull_request:
+    branches:
+      - agent/omir-p4-v0.5.0
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run stacked source smoke suites
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: MLF info and byte-exact wrapper
+        run: |
+          PYTHONPATH=src python -m isql_origin.p5_cli mlf-info fixtures/p5/sample.mlf
+          PYTHONPATH=src python -m isql_origin.p5_cli wrap-native fixtures/p5/sample.mlf --out /tmp/sample.omir
+          PYTHONPATH=src python -m isql_origin.p5_cli validate-wrapper /tmp/sample.omir
+          PYTHONPATH=src python -m isql_origin.p5_cli unwrap-native /tmp/sample.omir --out /tmp/restored.mlf
+          cmp fixtures/p5/sample.mlf /tmp/restored.mlf
+      - name: MEM to MLF VERIFIED and binding
+        run: |
+          PYTHONPATH=src python -m isql_origin.p5_cli bridge-verify fixtures/p4/mem-source.isql7 fixtures/p5/sample.mlf --plan examples/p5/mem-to-mlf-plan.json --observations examples/p5/mem-to-mlf-observations-verified.json --out /tmp/mem-mlf.json
+          PYTHONPATH=src python -m isql_origin.p5_cli bridge-receipt-verify /tmp/mem-mlf.json --source fixtures/p4/mem-source.isql7 --target fixtures/p5/sample.mlf
+      - name: MEM to MLF REJECTED is auditable
+        run: |
+          set +e
+          PYTHONPATH=src python -m isql_origin.p5_cli bridge-verify fixtures/p4/mem-source.isql7 fixtures/p5/sample.mlf --plan examples/p5/mem-to-mlf-plan.json --observations examples/p5/mem-to-mlf-observations-rejected.json >/tmp/rejected.json
+          code=$?
+          set -e
+          test "$code" -eq 1
+          grep -q 'REJECTED' /tmp/rejected.json
+      - name: MLF to DSR VERIFIED
+        run: >-
+          PYTHONPATH=src python -m isql_origin.p5_cli bridge-verify fixtures/p5/sample.mlf fixtures/p4/dsr-target.isqln
+          --plan examples/p5/mlf-to-dsr-plan.json
+          --observations examples/p5/mlf-to-dsr-observations-verified.json
+      - name: Checkout MLF Compiler 1.0.0 reference source
+        uses: actions/checkout@v4
+        with:
+          repository: kakon77777-commits/matrix-ledger-format
+          ref: ad2b3f4ef0960e8d96119825e26ee3807ea62b90
+          path: external/mlf
+      - name: MLF 1.0 reference validator and fingerprint oracle
+        env:
+          PYTHONPATH: src:external/mlf
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          from mlf_compiler.validator import validate_package
+          from mlf_compiler.reader import package_directory, load_records
+          from mlf_compiler.fingerprint import fingerprint_records
+          from isql_origin.p5_mlf import inspect_mlf_native
+
+          path = Path('fixtures/p5/sample.mlf')
+          report = validate_package(path)
+          assert report['valid'], report
+          with package_directory(path) as root:
+              records = load_records(root)
+              computed = fingerprint_records(records)
+              stored = json.loads((root / 'reports/fingerprints.json').read_text(encoding='utf-8'))
+          for key in ('structural_hash', 'content_hash', 'semantic_hash', 'presentation_hash'):
+              assert stored[key] == computed[key], (key, stored[key], computed[key])
+          origin = inspect_mlf_native(path.read_bytes())
+          assert origin.fingerprints['structural'] == computed['structural_hash']
+          assert origin.fingerprints['content'] == computed['content_hash']
+          assert origin.fingerprints['semantic'] == computed['semantic_hash']
+          assert origin.fingerprints['presentation'] == computed['presentation_hash']
+          print('MLF_REFERENCE_ORACLE_PASS')
+          PY

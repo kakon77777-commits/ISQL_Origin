@@ -1,0 +1,13 @@
+{
+  "schema": "isql-origin-bridge-observations/v0.5",
+  "source_native_sha256": "4b05e20902e3d43632f0150414c5412ca4063b3a168739655b3a30e541b38bf8",
+  "target_native_sha256": "4efa6c76319b7fd0c2e86cb29bacd6c4171e1bd70983c33b3df71daabac55802",
+  "observations": [
+    {
+      "invariant_ref": "1:70",
+      "comparator": "bytes-eq",
+      "source_value_hex": "7368613235363a62396634343636383638633138333630323736373766653666653863383966623166373138663266386133383236653166333833613732336263343335383931",
+      "target_value_hex": "6e6f742d6571756976616c656e74"
+    }
+  ]
+}

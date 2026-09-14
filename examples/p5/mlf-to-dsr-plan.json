@@ -1,0 +1,15 @@
+{
+  "schema": "isql-origin-bridge-plan/v0.5",
+  "source_profile": "mlf-1.0",
+  "target_profile": "isql-dsr",
+  "source_artifact_kind": "mlf.package",
+  "target_artifact_kind": "dsr.state",
+  "transition_ref": "1:1002",
+  "fidelity_class": 2,
+  "preserved_invariants": ["1:70"],
+  "lost_invariants": ["1:71"],
+  "validator_ref": "1:1101",
+  "authority_ref": "1:1201",
+  "provenance_ref": "1:1301",
+  "temporal_ref": "1:1401"
+}

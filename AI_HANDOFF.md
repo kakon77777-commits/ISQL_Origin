@@ -1,21 +1,19 @@
-# AI Handoff — ISQL Origin P4 v0.5.0
+# ISQL Origin OMIR P5 v0.6.0 — AI Handoff
 
-Current stacked line:
+P0–P4 remain unchanged in contract. P5 adds MLF 1.0 as a materially different third profile.
 
-`P0 machine substrate → P1 native profile binding → P2 semantic transport → P3 operator/authority → P4 bridge receipts`
+## P5 architectural results
 
-P4 rule: **External Conversion, Internal Verification**. Origin accepts already-produced source/target native artifacts; it does not convert MEM to DSR or execute transformer code.
+- Slot 0 is the frozen historical P1 MEM/DSR/common registry. Never append a new profile to it: doing so changes its digest and invalidates historical wrappers.
+- MLF is an extension profile in registry slot 1.
+- MLF wrappers preserve native `.mlf` bytes and store five identity entries: native-byte SHA-256 plus MLF structural/content/semantic/presentation fingerprints.
+- The P4 BridgeReceipt schema is unchanged. MEM→MLF and MLF→DSR use the same plan/observation/receipt machinery.
+- Runtime must not depend on `mlf_compiler`; external MLF Compiler 1.0.0 is the semantic validation/fingerprint oracle.
 
-Core source: `src/isql_origin/p4_bridge.py`.
-CLI compatibility layer: `src/isql_origin/p4_cli.py`.
+## Hard boundaries
 
-Important invariants:
-- source/target native SHA-256 and profile/artifact/version are explicit;
-- preserved and lost invariant sets are disjoint;
-- observations are non-canonical and SHA-bound;
-- comparator whitelist only;
-- VERIFIED is contract-relative, not universal semantic equivalence;
-- REJECTED is a valid auditable receipt;
-- `execute=false`, `conversion_performed=false` always.
+No MLF compilation, no MLF execution, no mutation of historical registry slot 0, no new OMIR section, no MLF-specific BridgeReceipt, and no promotion of MLF semantic fingerprint to universal semantic truth.
 
-Next natural phase after P4: third-profile stress test / MLF and broader bridge-contract pressure testing before adding stronger conversion machinery.
+## Next step
+
+Prefer independent implementation/conformance work over immediately adding a fourth special-case profile.
