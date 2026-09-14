@@ -1,0 +1,1 @@
+{"schema":"isql-origin-independent-conformance/v0.7","implementation":"go-stdlib-independent","total":46,"passed":45,"failures":0,"spec_gaps":1,"note":"Full published-vector conformance is executed in the archival P6 release. GitHub source CI recompiles the independent Go implementation and runs source smoke against inherited P3-P5 fixtures."}
