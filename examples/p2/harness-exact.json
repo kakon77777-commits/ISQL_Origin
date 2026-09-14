@@ -1,0 +1,1 @@
+{"schema":"isql-origin-p2-reference-harness/v0.3","transformers":{"0:401":{"op":"int-add","arg":1},"0:402":{"op":"int-add","arg":2},"0:403":{"op":"int-add","arg":-3}},"observables":{"0:811":{"op":"bytes"},"0:812":{"op":"int"}},"comparators":{"0:821":{"op":"exact"},"0:822":{"op":"numeric-abs"}},"tolerances":{"0:832":1.0}}
