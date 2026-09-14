@@ -44,11 +44,20 @@ P1_CONFORMANCE_CLASS_REF = Ref(0, 71)
 REGISTRY_ENTRY_KIND_REF = Ref(0, 200)
 REGISTRY_UTF8_PAYLOAD_KIND_REF = Ref(0, 201)
 
+# W4 keeps the stable slot-0 P1 profile registry byte-identical.
+# Experimental native profiles live in a separate slot-1 registry so adding
+# them cannot change the digest pinned by historical P1/P6 wrappers.
+EXPERIMENTAL_PROFILE_NAMESPACE_REF = Ref(1, 3)
+MEM_ISX1_EXPERIMENTAL_KIND_REF = Ref(1, 1)
+MEM_ISX1_EXPERIMENTAL_CODEC_REF = Ref(1, 2)
+
+
 @dataclass(frozen=True, slots=True)
 class ProfileDescriptor:
     name: str
     profile_ref: Ref
     profile_version: int
+
 
 @dataclass(frozen=True, slots=True)
 class ArtifactDescriptor:
@@ -61,11 +70,13 @@ class ArtifactDescriptor:
     version_encoding: str
     extensions: tuple[str, ...]
 
+
 @dataclass(frozen=True, slots=True)
 class DetectedArtifact:
     profile: ProfileDescriptor
     artifact: ArtifactDescriptor
     native_version: int
+
 
 MEM_PROFILE = ProfileDescriptor("isql-mem", PROFILE_MEM_REF, 1)
 DSR_PROFILE = ProfileDescriptor("isql-dsr", PROFILE_DSR_REF, 1)
@@ -73,6 +84,7 @@ _ARTIFACTS = (
     ArtifactDescriptor("mem.isn7", MEM_PROFILE, MEM_ISN7_KIND_REF, MEM_ISN7_CODEC_REF, b"ISN7", (7,), "byte", (".isql7",)),
     ArtifactDescriptor("mem.isd8", MEM_PROFILE, MEM_ISD8_KIND_REF, MEM_ISD8_CODEC_REF, b"ISD8", (8,), "byte", (".isqld8",)),
     ArtifactDescriptor("mem.ili1", MEM_PROFILE, MEM_ILI1_KIND_REF, MEM_ILI1_CODEC_REF, b"ILI1", (1,), "byte", (".ili1",)),
+    ArtifactDescriptor("mem.isx1.experimental", MEM_PROFILE, MEM_ISX1_EXPERIMENTAL_KIND_REF, MEM_ISX1_EXPERIMENTAL_CODEC_REF, b"ISX1", (1,), "byte", (".isx1",)),
     ArtifactDescriptor("dsr.registry", DSR_PROFILE, DSR_REGISTRY_KIND_REF, DSR_REGISTRY_CODEC_REF, bytes.fromhex("d551b104"), (4,), "uvarint", (".isqlr",)),
     ArtifactDescriptor("dsr.state", DSR_PROFILE, DSR_STATE_KIND_REF, DSR_STATE_CODEC_REF, bytes.fromhex("d551c105"), (5,), "uvarint", (".isqln",)),
     ArtifactDescriptor("dsr.event-stream", DSR_PROFILE, DSR_EVENT_STREAM_KIND_REF, DSR_EVENT_STREAM_CODEC_REF, bytes.fromhex("d551e105"), (5,), "uvarint", (".isqle",)),
@@ -82,38 +94,133 @@ _ARTIFACTS = (
 )
 _PROFILES = (MEM_PROFILE, DSR_PROFILE)
 
-def list_profiles(): return _PROFILES
-def list_artifacts(): return _ARTIFACTS
+
+def list_profiles():
+    return _PROFILES
+
+
+def list_artifacts():
+    return _ARTIFACTS
+
 
 def artifact_by_kind_ref(ref):
     return next((a for a in _ARTIFACTS if a.object_kind_ref == ref), None)
 
+
 def profile_by_ref(ref):
     return next((p for p in _PROFILES if p.profile_ref == ref), None)
 
+
+def artifact_registry_slots(artifact: ArtifactDescriptor) -> tuple[int, ...]:
+    slots = {0, artifact.object_kind_ref.bundle_slot, artifact.codec_ref.bundle_slot}
+    return tuple(sorted(slots))
+
+
 def _registry_labels():
-    rows={1:"sha256",2:"origin-profile-registry",3:"isql-origin-p1",10:"profile:isql-mem",11:"profile:isql-dsr",20:"object:mem.isn7",21:"object:mem.isd8",22:"object:mem.ili1",30:"object:dsr.registry",31:"object:dsr.state",32:"object:dsr.event-stream",33:"object:dsr.branch",34:"object:dsr.causal-program",35:"object:dsr.vm-program",50:"codec:mem.isn7",51:"codec:mem.isd8",52:"codec:mem.ili1",53:"codec:dsr.registry",54:"codec:dsr.state",55:"codec:dsr.event-stream",56:"codec:dsr.branch",57:"codec:dsr.causal-program",58:"codec:dsr.vm-program",60:"identity:native-bytes-sha256",61:"invariant:byte-exact",62:"observable:native-bytes",63:"comparator:bytes-equal",64:"scope:native-artifact",65:"validator:sha256",66:"payload:native-artifact",67:"media:application-octet-stream",68:"identity-policy:native-byte-exact",69:"canonicalization:native-pass-through",70:"decoder-contract:read-only-detect",71:"conformance:origin-p1",200:"registry-entry-kind:label",201:"registry-payload-kind:utf8"}
+    rows = {
+        1: "sha256",
+        2: "origin-profile-registry",
+        3: "isql-origin-p1",
+        10: "profile:isql-mem",
+        11: "profile:isql-dsr",
+        20: "object:mem.isn7",
+        21: "object:mem.isd8",
+        22: "object:mem.ili1",
+        30: "object:dsr.registry",
+        31: "object:dsr.state",
+        32: "object:dsr.event-stream",
+        33: "object:dsr.branch",
+        34: "object:dsr.causal-program",
+        35: "object:dsr.vm-program",
+        50: "codec:mem.isn7",
+        51: "codec:mem.isd8",
+        52: "codec:mem.ili1",
+        53: "codec:dsr.registry",
+        54: "codec:dsr.state",
+        55: "codec:dsr.event-stream",
+        56: "codec:dsr.branch",
+        57: "codec:dsr.causal-program",
+        58: "codec:dsr.vm-program",
+        60: "identity:native-bytes-sha256",
+        61: "invariant:byte-exact",
+        62: "observable:native-bytes",
+        63: "comparator:bytes-equal",
+        64: "scope:native-artifact",
+        65: "validator:sha256",
+        66: "payload:native-artifact",
+        67: "media:application-octet-stream",
+        68: "identity-policy:native-byte-exact",
+        69: "canonicalization:native-pass-through",
+        70: "decoder-contract:read-only-detect",
+        71: "conformance:origin-p1",
+        200: "registry-entry-kind:label",
+        201: "registry-payload-kind:utf8",
+    }
     return tuple(sorted(rows.items()))
 
-def profile_registry():
-    return RegistryBundle(1,PROFILE_REGISTRY_BUNDLE_KIND_REF,PROFILE_REGISTRY_NAMESPACE_REF,None,1,tuple(RegistryEntry(i,REGISTRY_ENTRY_KIND_REF,REGISTRY_UTF8_PAYLOAD_KIND_REF,label.encode()) for i,label in _registry_labels()))
 
-def profile_registry_digest(): return orb_digest(profile_registry())
+def profile_registry():
+    return RegistryBundle(
+        1,
+        PROFILE_REGISTRY_BUNDLE_KIND_REF,
+        PROFILE_REGISTRY_NAMESPACE_REF,
+        None,
+        1,
+        tuple(
+            RegistryEntry(i, REGISTRY_ENTRY_KIND_REF, REGISTRY_UTF8_PAYLOAD_KIND_REF, label.encode())
+            for i, label in _registry_labels()
+        ),
+    )
+
+
+def profile_registry_digest():
+    return orb_digest(profile_registry())
+
+
+def experimental_profile_registry():
+    rows = (
+        (1, "object:mem.isx1.experimental"),
+        (2, "codec:mem.isx1.experimental"),
+        (3, "isql-origin-experimental-profile-v1"),
+    )
+    return RegistryBundle(
+        1,
+        PROFILE_REGISTRY_BUNDLE_KIND_REF,
+        EXPERIMENTAL_PROFILE_NAMESPACE_REF,
+        None,
+        1,
+        tuple(
+            RegistryEntry(i, REGISTRY_ENTRY_KIND_REF, REGISTRY_UTF8_PAYLOAD_KIND_REF, label.encode())
+            for i, label in rows
+        ),
+    )
+
+
+def experimental_profile_registry_digest():
+    return orb_digest(experimental_profile_registry())
+
 
 def _read_version(data, artifact):
-    offset=len(artifact.magic)
-    if len(data)<=offset: raise OriginDecodeError("PROFILE_NATIVE_TRUNCATED")
-    if artifact.version_encoding=="byte": return data[offset]
-    try: version,_=decode_uvarint(data,offset)
-    except OriginDecodeError as exc: raise OriginDecodeError("PROFILE_NATIVE_TRUNCATED",str(exc)) from exc
+    offset = len(artifact.magic)
+    if len(data) <= offset:
+        raise OriginDecodeError("PROFILE_NATIVE_TRUNCATED")
+    if artifact.version_encoding == "byte":
+        return data[offset]
+    try:
+        version, _ = decode_uvarint(data, offset)
+    except OriginDecodeError as exc:
+        raise OriginDecodeError("PROFILE_NATIVE_TRUNCATED", str(exc)) from exc
     return version
 
+
 def detect_native_artifact(data):
-    raw=bytes(data)
+    raw = bytes(data)
     for artifact in _ARTIFACTS:
         if raw.startswith(artifact.magic):
-            version=_read_version(raw,artifact)
-            if version not in artifact.supported_versions: raise OriginDecodeError("PROFILE_NATIVE_VERSION_UNSUPPORTED",f"{artifact.key}:{version}")
-            return DetectedArtifact(artifact.profile,artifact,version)
-    if any(magic.startswith(raw) for magic in (a.magic for a in _ARTIFACTS)) and len(raw)<5: raise OriginDecodeError("PROFILE_NATIVE_TRUNCATED")
+            version = _read_version(raw, artifact)
+            if version not in artifact.supported_versions:
+                raise OriginDecodeError("PROFILE_NATIVE_VERSION_UNSUPPORTED", f"{artifact.key}:{version}")
+            return DetectedArtifact(artifact.profile, artifact, version)
+    if any(magic.startswith(raw) for magic in (a.magic for a in _ARTIFACTS)) and len(raw) < 5:
+        raise OriginDecodeError("PROFILE_NATIVE_TRUNCATED")
     raise OriginDecodeError("PROFILE_NATIVE_MAGIC_UNKNOWN")
