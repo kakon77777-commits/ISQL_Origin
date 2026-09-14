@@ -1,0 +1,48 @@
+name: P3 Source Smoke
+
+on:
+  push:
+    branches:
+      - agent/omir-p3-v0.4.0
+  pull_request:
+    branches:
+      - agent/omir-p2-v0.3.0
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run P2 and P3 source smoke suites
+        run: PYTHONPATH=src python -m unittest tests.test_p2_github_smoke tests.test_p3_github_smoke -v
+      - name: Operator info
+        run: PYTHONPATH=src python -m isql_origin.p3_cli operator-info examples/p3/valid-action.omir
+      - name: Ready action certificate
+        run: >-
+          PYTHONPATH=src python -m isql_origin.p3_cli action-certificate examples/p3/valid-action.omir
+          --operator 0:701 --context examples/p3/context-valid.json
+      - name: Authority deny must return exit 1
+        shell: bash
+        run: |
+          set +e
+          PYTHONPATH=src python -m isql_origin.p3_cli action-certificate examples/p3/valid-action.omir --operator 0:701 --context examples/p3/context-authority-denied.json > /tmp/denied.json
+          code=$?
+          set -e
+          test "$code" -eq 1
+          grep -q 'AUTHORITY_DENIED:0:401' /tmp/denied.json
+      - name: DSR VM handoff is non-executing
+        run: >-
+          PYTHONPATH=src python -m isql_origin.p3_cli dsr-handoff examples/p3/valid-action.omir
+          --operator 0:701 --context examples/p3/context-valid.json --executor-file fixtures/dsr/vm.isqlp
+      - name: DSR state must be rejected as executor
+        shell: bash
+        run: |
+          set +e
+          PYTHONPATH=src python -m isql_origin.p3_cli dsr-handoff examples/p3/valid-action.omir --operator 0:701 --context examples/p3/context-valid.json --executor-file fixtures/dsr/state.isqln >/tmp/state.out 2>/tmp/state.err
+          code=$?
+          set -e
+          test "$code" -eq 2
+          grep -q 'P3_DSR_EXECUTOR_NOT_PROGRAM' /tmp/state.err
