@@ -1,0 +1,43 @@
+name: P4 Source Smoke
+
+on:
+  push:
+    branches: [agent/omir-p4-v0.5.0]
+  pull_request:
+    branches: [agent/omir-p3-v0.4.0]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run stacked source smoke suites
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Candidate is non-executing
+        run: >-
+          PYTHONPATH=src python -m isql_origin.p4_cli bridge-candidate
+          fixtures/p4/mem-source.isql7 fixtures/p4/dsr-target.isqln
+          --plan examples/p4/plan.json
+      - name: VERIFIED receipt and binding
+        run: |
+          PYTHONPATH=src python -m isql_origin.p4_cli bridge-verify fixtures/p4/mem-source.isql7 fixtures/p4/dsr-target.isqln --plan examples/p4/plan.json --observations examples/p4/observations-verified.json --out /tmp/p4-receipt.json
+          PYTHONPATH=src python -m isql_origin.p4_cli bridge-receipt-verify /tmp/p4-receipt.json --source fixtures/p4/mem-source.isql7 --target fixtures/p4/dsr-target.isqln
+      - name: REJECTED receipt must return exit 1
+        run: |
+          set +e
+          PYTHONPATH=src python -m isql_origin.p4_cli bridge-verify fixtures/p4/mem-source.isql7 fixtures/p4/dsr-target.isqln --plan examples/p4/plan.json --observations examples/p4/observations-rejected.json >/tmp/rejected.json
+          code=$?
+          set -e
+          test "$code" -eq 1
+          grep -q 'REJECTED' /tmp/rejected.json
+      - name: Digest mismatch must return exit 2
+        run: |
+          set +e
+          PYTHONPATH=src python -m isql_origin.p4_cli bridge-verify fixtures/p4/mem-source.isql7 fixtures/p4/dsr-target.isqln --plan examples/p4/plan.json --observations examples/p4/observations-bad-digest.json >/tmp/bad.out 2>/tmp/bad.err
+          code=$?
+          set -e
+          test "$code" -eq 2
+          grep -q 'P4_OBSERVATION_SOURCE_DIGEST_MISMATCH' /tmp/bad.err

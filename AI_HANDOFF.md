@@ -1,14 +1,21 @@
-# ISQL Origin P3 v0.4.0 — AI Handoff
+# AI Handoff — ISQL Origin P4 v0.5.0
 
-P0 = deterministic OMIR/ORB substrate.
-P1 = byte-exact MEM/DSR native wrappers.
-P2 = local SemanticChart/Transition contracts + bounded holonomy.
-P3 = OperatorDescriptor/AuthorityRecord + deny-first ActionCertificate + non-executing DSR program handoff.
+Current stacked line:
 
-Authority records are declarations, not automatic trust. Only refs explicitly accepted by the non-canonical ActionContext participate. Matching denies override grants.
+`P0 machine substrate → P1 native profile binding → P2 semantic transport → P3 operator/authority → P4 bridge receipts`
 
-`ready` means eligible under the supplied context; it never means executed.
+P4 rule: **External Conversion, Internal Verification**. Origin accepts already-produced source/target native artifacts; it does not convert MEM to DSR or execute transformer code.
 
-DSR handoff accepts only native causal/VM `.isqlp`, binds Origin and DSR bytes with SHA-256, and always sets `execute=false`.
+Core source: `src/isql_origin/p4_bridge.py`.
+CLI compatibility layer: `src/isql_origin/p4_cli.py`.
 
-Next natural phase: P4 bridge receipts with explicit preserved/lost cross-profile invariants. Keep conversion separate from authority and execution.
+Important invariants:
+- source/target native SHA-256 and profile/artifact/version are explicit;
+- preserved and lost invariant sets are disjoint;
+- observations are non-canonical and SHA-bound;
+- comparator whitelist only;
+- VERIFIED is contract-relative, not universal semantic equivalence;
+- REJECTED is a valid auditable receipt;
+- `execute=false`, `conversion_performed=false` always.
+
+Next natural phase after P4: third-profile stress test / MLF and broader bridge-contract pressure testing before adding stronger conversion machinery.
